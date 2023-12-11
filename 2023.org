@@ -1,0 +1,1059 @@
+#+TITLE: 2023 challenge
+#+AUTHOR: Advent of code
+#+EMAIL: nazar@autistici.org
+#+LANGUAGE: en
+#+OPTIONS: title:t author:t email:nil toc:nil num:nil timestamp:nil
+
+* DONE Day 1.1[fn:1]
+
+#+begin_src fennel :session day01
+(local lume (require :lume))
+
+(fn fold [t]
+  "sum of array values"
+  (lume.reduce t (fn [acc x] (+ acc x))))
+
+(fn test-input-1 [lines]
+  (let [numbers []]
+    (each [_ line (ipairs lines)]
+      (let [fd (string.match line "[0-9]")
+            ld (string.match (string.reverse line) "[0-9]")]
+        (table.insert numbers (tonumber (.. fd ld)))))
+    (assert (= 142 (fold numbers)))))
+
+(test-input-1 ["1abc2" "pqr3stu8vwx" "a1b2c3d4e5f" "treb7uchet"])
+#+end_src
+
+#+RESULTS:
+: true
+
+
+#+begin_src fennel :session day01
+(fn read-lines [path]
+  (icollect [lines (io.lines path)] lines))
+
+(fn sum-of-first-and-last-digit [lines]
+  (let [numbers []]
+    (each [_ line (ipairs lines)]
+      (let [fd (string.match line "[0-9]")
+            ld (string.match (string.reverse line) "[0-9]")]
+        (table.insert numbers (tonumber (.. fd ld)))))
+    (fold numbers)))
+
+(sum-of-first-and-last-digit (read-lines "01.inp"))
+#+end_src
+
+#+RESULTS:
+: 56506
+
+* DONE Day 1.2[fn:2]
+
+
+#+begin_src fennel :session day01
+(fn starts-at-index [s idx pref]
+  (= (string.sub s idx (- (+ idx (length pref)) 1)) pref))
+
+(fn replace-by-index [line index]
+  (let [new-line
+        (if (starts-at-index line index "one")
+            (string.gsub line "one" "o1e" 1)
+            (starts-at-index line index "two")
+            (string.gsub line "two" "t2o" 1)
+            (starts-at-index line index "three")
+            (string.gsub line "three" "th3ee" 1)
+            (starts-at-index line index "four")
+            (string.gsub line "four" "fo4r" 1)
+            (starts-at-index line index "five")
+            (string.gsub line "five" "fi5e" 1)
+            (starts-at-index line index "six")
+            (string.gsub line "six" "s6x" 1)
+            (starts-at-index line index "seven")
+            (string.gsub line "seven" "se7en" 1)
+            (starts-at-index line index "eight")
+            (string.gsub line "eight" "ei8ht" 1)
+            (starts-at-index line index "nine")
+            (string.gsub line "nine" "n9ne" 1)
+            line)]
+    (if (< (+ 1 index) (length new-line))
+        (replace-by-index new-line (+ 1 index))
+        new-line)))
+
+(fn replace-literal-numbers [lines]
+  (let [new-lines []]
+    (each [_ line (ipairs lines)]
+      (let [new-line (replace-by-index line 1)]
+        (table.insert new-lines new-line)))
+    new-lines))
+
+(fn test-input-2 [lines]
+  (let [numbers []]
+    (each [_ line (ipairs lines)]
+      (let [fd (string.match line "[0-9]")
+            ld (string.match (string.reverse line) "[0-9]")]
+        (table.insert numbers (tonumber (.. fd ld)))))
+    (let [result  (fold numbers)]
+      (assert (= 281 result)))))
+
+(test-input-2
+ (replace-literal-numbers
+  ["two1nine"
+   "eightwothree"
+   "abcone2threexyz"
+   "xtwone3four"
+   "4nineeightseven2"
+   "zoneight234"
+   "7pqrstsixteen"]))
+#+end_src
+
+#+RESULTS:
+: true
+
+#+begin_src fennel :session day01
+(sum-of-first-and-last-digit
+ (replace-literal-numbers
+  (read-lines "01.inp"))) 
+#+end_src
+
+#+RESULTS:
+: 56017
+
+* DONE Day 2.1[fn:3]
+
+#+begin_src fennel :session day02
+(local lume (require :lume))
+(fn string.split [str sep]
+  (icollect [s (string.gmatch str (.. "[^" sep "]+"))] s))
+
+(fn parse-take [take]
+  {:r (tonumber (string.match take "([0-9]*) red"))
+   :g (tonumber (string.match take "([0-9]*) green"))
+   :b (tonumber (string.match take "([0-9]*) blue"))})
+
+(fn read-game [game]
+  {:id (tonumber (string.match game "Game ([0-9]*):"))
+   :takes (lume.map (string.split game ";") parse-take)})
+
+(fn possible-take? [take]
+  (let [max-red 12
+        red (or (. take :r) 0)
+        max-green 13
+        green (or (. take :g) 0)
+        max-blue 14
+        blue (or (. take :b) 0)]
+    (not (or (> red max-red)
+             (> green max-green)
+             (> blue max-blue)))))
+
+(fn possible-game? [game]
+  (= nil (lume.find (lume.map (. game :takes) possible-take?) false)))
+  
+(fn sum-game-ids [games]
+  (accumulate [sum 0 _ game (ipairs games)]
+    (+ sum (. game :id))))
+
+(fn find-possible-games-ids [lines]
+  (let [games []]
+    (each [_ line (ipairs lines)]
+      (let [game (read-game line)]
+        (table.insert games game)))
+    (sum-game-ids (lume.filter games possible-game?))))
+
+(fn test-input [lines]
+  (assert (= 8 (find-possible-games-ids lines))))
+
+(local test-lines
+       ["Game 1: 3 blue, 4 red; 1 red, 2 green, 6 blue; 2 green"
+        "Game 2: 1 blue, 2 green; 3 green, 4 blue, 1 red; 1 green, 1 blue"
+        "Game 3: 8 green, 6 blue, 20 red; 5 blue, 4 red, 13 green; 5 green, 1 red"
+        "Game 4: 1 green, 3 red, 6 blue; 3 green, 6 red; 3 green, 15 blue, 14 red"
+        "Game 5: 6 red, 1 blue, 3 green; 2 blue, 1 red, 2 green"])
+
+(test-input test-lines)
+
+(fn read-lines [path]
+  (icollect [line (io.lines path)] line))
+
+(find-possible-games-ids (read-lines "02.inp"))
+#+end_src
+
+#+RESULTS:
+: 2449
+
+* DONE Day 2.2[fn:4]
+
+#+begin_src fennel :session day02
+(fn find-max-red-take [game]
+  (math.max (table.unpack (lume.map (. game :takes) (fn [take] (or (. take :r) 0))))))
+
+(fn find-max-green-take [game]
+  (math.max (table.unpack (lume.map (. game :takes) (fn [take] (or (. take :g) 0))))))
+
+(fn find-max-blue-take [game]
+  (math.max (table.unpack (lume.map (. game :takes) (fn [take] (or (. take :b) 0))))))
+
+(fn find-game-power-cube [game]
+  (*
+   (find-max-red-take game)
+   (find-max-green-take game)
+   (find-max-blue-take game)))
+
+(fn sum [xs]
+  (accumulate [sum 0 _ x (ipairs xs)]
+    (+ sum x)))
+
+(fn sum-game-power-cubes [lines]
+  (let [power-cubes []]
+    (each [_ line (ipairs lines)]
+      (let [game (read-game line)]
+        (table.insert power-cubes (find-game-power-cube game))))
+    (sum power-cubes)))
+
+(fn test-input2 [lines]
+  (assert (= 2286 (sum-game-power-cubes lines))))
+
+(test-input2 test-lines)
+(sum-game-power-cubes (read-lines "02.inp"))
+
+#+end_src
+
+#+RESULTS:
+: 63981
+
+* CANCELLED Day 3.1[fn:5]
+:LOGBOOK:
+- State "CANCELLED"  from "TODO"       [2023-12-11 Mon 11:51]
+:END:
+
+* CANCELLED Day 3.2[fn:6]
+:LOGBOOK:
+- State "CANCELLED"  from "TODO"       [2023-12-11 Mon 11:51]
+:END:
+
+* DONE Day 4.1[fn:7]
+
+#+begin_src fennel :session day04
+(local lume (require :lume))
+(local fennel (require :fennel))
+
+(fn pretty-print [xs]
+  (each [_ row (ipairs xs)]
+    (print (fennel.view xs))))
+
+(fn string.split [str sep]
+  (icollect [s (string.gmatch str (.. "[^" sep "]+"))] s))
+
+(fn table.intersect [lottery ticket]
+  (let [t1 (table.sort lottery)
+        t2 (table.sort ticket)
+        result []]
+    (each [_ val (ipairs lottery)]
+      (when (lume.find ticket val)
+        (table.insert result val)))
+    result))
+
+(fn math.pow [mant exp]
+  (if (= exp 0)
+      1
+      (= exp 1)
+      mant
+      (* mant (math.pow mant (- exp 1)))))
+
+(fn sum [xs]
+  (accumulate [sum 0 _ x (ipairs xs)]
+    (+ sum x)))
+
+(fn read-game [s]
+  (let [id (tonumber (string.match s "Card *([0-9]*):"))
+        lottery (string.split (string.match s ":([0-9 ]*)|") " ")
+        ticket (string.split (string.match s "|([0-9 ]*)$") " ")]
+    {:id id :lottery (lume.map lottery tonumber) :ticket (lume.map ticket tonumber)}))
+
+(fn read-games [lines]
+  (let [result []]
+    (each [_ line (ipairs lines)]
+      (let [game (read-game line)]
+        (table.insert result game)))
+    result))
+
+(fn wins-to-points [n]
+  (if (> n 0)
+      (math.pow 2 (- n 1))
+      0))
+
+(fn count-points [games]
+  (let [result []]
+    (each [_ game (ipairs games)]
+      (let [wins (table.intersect (. game :lottery) (. game :ticket))
+            points (wins-to-points (length wins))]
+        (table.insert result points)))
+    result))
+
+(fn test-input [lines]
+  (let [games (read-games lines)]
+    (assert (= 13 (sum (count-points games))))))
+
+(local test-lines
+       ["Card 1: 41 48 83 86 17 | 83 86  6 31 17  9 48 53"
+        "Card 2: 13 32 20 16 61 | 61 30 68 82 17 32 24 19"
+        "Card 3:  1 21 53 59 44 | 69 82 63 72 16 21 14  1"
+        "Card 4: 41 92 73 84 69 | 59 84 76 51 58  5 54 83"
+        "Card 5: 87 83 26 28 32 | 88 30 70 12 93 22 82 36"
+        "Card 6: 31 18 13 56 72 | 74 77 10 23 35 67 36 11"])
+(test-input test-lines)
+
+(fn real-input [lines]
+  (let [games (read-games lines)]
+    (sum (count-points games))))
+
+(fn read-lines [path]
+  (icollect [line (io.lines path)] line))
+
+(real-input (read-lines "04.inp"))
+#+end_src
+
+#+RESULTS:
+: 18653
+
+* DONE Day 4.2[fn:8]
+
+#+begin_src fennel :session day04
+
+(fn table.replace [t i v]
+  (table.remove t i)
+  (table.insert t i v))
+
+(fn table.increment [t i v]
+  (let [o (. t i)]
+    (table.replace t i (+ o v)))
+  t)
+
+(fn collect-cards [games]
+  (let [result []]
+    (each [_ game (ipairs games)]
+      (let [count (length (table.intersect (. game :lottery) (. game :ticket)))
+            id (. game :id)
+            cards []]
+        (when (< 0 count)
+          (fcollect [i (+ id 1) (+ count id) 1]
+            (table.insert cards i)))
+        (tset result id cards)))
+    result))
+
+(fn count-cards [games]
+  (let [cards (collect-cards games)
+        result (fcollect [i 1 (length cards) 1] 1)]
+    (each [i v (ipairs cards)]
+      (each [j w (ipairs v)]
+        (table.increment result w (. result i))))
+    result))
+
+(fn test-input2 [lines]
+  (let [games (read-games lines)]
+    (assert (= 30 (sum (count-cards games))))))
+
+(test-input2 test-lines)
+
+(fn real-input2 [lines]
+  (let [games (read-games lines)]
+    (sum (count-cards games))))
+
+(fn read-lines [path]
+  (icollect [line (io.lines path)] line))
+
+(real-input2 (read-lines "04.inp"))
+#+end_src
+
+#+RESULTS:
+: 5921508
+
+* TODO Day 5.1[fn:9]
+* CANCELLED Day 5.2[fn:10]
+:LOGBOOK:
+- State "CANCELLED"  from "TODO"       [2023-12-11 Mon 11:10]
+:END:
+* DONE Day 6.1[fn:11]
+
+#+begin_src fennel :session day06
+(local lume (require :lume))
+(local fennel (require :fennel))
+
+(fn pretty-print [xs]
+  (print (fennel.view xs)))
+
+(fn time2distance [time speed]
+  (* time speed))
+
+(fn race2distance [time]
+  (fcollect [charge 0 time 1]
+    (time2distance (- time charge) charge)))
+
+(fn find-wins [input]
+  (let [result []]
+    (each [_ [time record] (ipairs input)]
+      (table.insert result
+                    (lume.reduce
+                     (race2distance time)
+                     (fn [acc x] (if (> x record) (+ acc 1) acc)))))
+    result))
+
+(fn count-wins [wins]
+  (accumulate [prod 1
+               _ win (ipairs wins)]
+    (* prod win)))
+
+(let [input [[7 9] [15 40] [30 200]]
+      wins (find-wins input)]
+  (assert (= 288 (count-wins wins))))
+
+(fn read-lines [path]
+  (icollect [line (io.lines path)] line))
+
+(fn table.zip [t1 t2]
+  (assert (= (length t1) (length t2)))
+  (let [result []]
+    (for [i 1 (length t1) 1]
+      (when (. t2 i)
+        (table.insert result [(. t1 i) (. t2 i)])))
+    result))
+
+(fn string.split [str sep]
+  (icollect [s (string.gmatch str (.. "[^" sep "]+"))] s))
+
+(fn lines-to-array [lines]
+  [(lume.map (string.split (. lines 1) " ") #(tonumber $))
+   (lume.map (string.split (. lines 2) " ") #(tonumber $))])
+
+(let [input (table.zip (table.unpack (lines-to-array (read-lines "06.inp"))))]
+  (count-wins (find-wins input)))
+
+#+end_src
+
+#+RESULTS:
+: 4811940
+
+* DONE Day 6.2[fn:12]
+
+#+begin_src fennel :session day06
+(let [input [[71530 940200]]
+      wins (find-wins input)]
+  (assert (= 71503 (count-wins wins))))
+
+(fn lines-to-string [lines]
+  (let [time (string.gsub (string.gsub (. lines 1) " *" "") "Time:" "")
+        distance (string.gsub (string.gsub (. lines 2) " *" "") "Distance:" "")]
+    [(tonumber time)
+     (tonumber distance)]))
+
+(let [input [(lines-to-string (read-lines "06.inp"))]]
+  (count-wins (find-wins input)))
+
+#+end_src
+
+#+RESULTS:
+: 30077773
+
+* DONE Day 7.1[fn:13]
+
+#+begin_src fennel :session day07
+(local fennel (require :fennel))
+
+(fn pretty-print [xs]
+  (print (fennel.view xs)))
+
+(fn string.toarray [s]
+  (let [result []]
+    (for [i 1 (length s)]
+      (table.insert result (string.sub s i i)))
+    result))
+
+(fn string.split [str sep]
+  (icollect [s (string.gmatch str (.. "[^" sep "]+"))] s))
+
+(fn table.reverse [xs]
+  (let [result []]
+    (each [_ x (ipairs xs)]
+      (table.insert result 1 x))
+    result))
+
+(fn all-wins [hands]
+  (accumulate [sum 0 rank hand (ipairs hands)]
+    (+ sum (* rank (. hand :bid)))))
+
+(fn hand2type [hand]
+  (case (string.toarray hand)
+    ;; five of a kind
+    [a a a a a] :t7
+    ;; four of a kind
+    [a b b b b] :t6
+    [b a b b b] :t6
+    [b b a b b] :t6
+    [b b b a b] :t6
+    [b b b b a] :t6
+    ;; full house
+    [a a a b b] :t5
+    [a a b a b] :t5
+    [a b a a b] :t5
+    [b a a a b] :t5
+    [b a a b a] :t5
+    [b a b a a] :t5
+    [b b a a a] :t5
+    [a b b a a] :t5
+    [a a b b a] :t5
+    [a b a b a] :t5
+    ;; three of a kind
+    [b c a a a] :t4
+    [b a c a a] :t4
+    [b a a c a] :t4
+    [b a a a c] :t4
+    [a b a a c] :t4
+    [a a b a c] :t4
+    [a a a b c] :t4
+    [a b c a a] :t4
+    [a a b c a] :t4
+    [a b a c a] :t4
+    ;; two pairs
+    [a a b b c] :t3
+    [a a b c b] :t3
+    [a a c b b] :t3
+    [a c a b b] :t3
+    [c a a b b] :t3
+    [a b a b c] :t3
+    [a b a c b] :t3
+    [a b c a b] :t3
+    [a c b a b] :t3
+    [c a b a b] :t3
+    [a b b a c] :t3
+    [a b b c a] :t3
+    [a b c b a] :t3
+    [a c b b a] :t3
+    [c a b b a] :t3
+    ;; one pair
+    [a a b c d] :t2
+    [a b a c d] :t2
+    [a b c a d] :t2
+    [a b c d a] :t2
+    [b a c d a] :t2
+    [b c a d a] :t2
+    [b c d a a] :t2
+    [b a a c d] :t2
+    [b c a a d] :t2
+    [b a c a d] :t2
+    ;; high card
+    [a b c d e] :t1))
+
+(fn hand2number [hand]
+  (accumulate [sum 0 i x (ipairs (table.reverse (string.toarray hand)))]
+    (+ sum (* (^ 100 (- i 1))
+              (case x
+                "A" 14
+                "K" 13
+                "Q" 12
+                "J" 11
+                "T" 10
+                "9" 9
+                "8" 8
+                "7" 7
+                "6" 6
+                "5" 5
+                "4" 4
+                "3" 3
+                "2" 2)))))
+
+(fn test-hand2number []
+  (assert (= 1212121114 (hand2number "QQQJA")))
+  (assert (= 1414141414 (hand2number "AAAAA")))
+  (assert (= 202020202 (hand2number "22222")))
+  (assert (= 1313060707 (hand2number "KK677")))
+  (assert (= 1310111110 (hand2number "KTJJT"))))
+
+(test-hand2number)
+
+(fn numeric-comp [a b]
+  (let [an (hand2number (. a :hand))
+        bn (hand2number (. b :hand))]
+    (< an bn)))
+
+(fn test-numeric-comp []
+  (assert (numeric-comp {:hand "QQQJA"} {:hand "AAAAA"}))
+  (assert (not (numeric-comp {:hand "AAAAA"} {:hand "QQQJA"})))
+  (assert (numeric-comp {:hand "22222"} {:hand "QQQJA"}))
+  (assert (not (numeric-comp {:hand "QQQJA"} {:hand "22222"})))
+  (assert (not (numeric-comp {:hand "KK677"} {:hand "KTJJT"}))))
+
+(test-numeric-comp)
+
+(fn table.join [xs ys]
+  (table.sort ys numeric-comp)
+  (table.move ys 1 (length ys) (+ 1 (length xs)) xs))
+
+(fn all-hands [lines]
+  (let [t7 [] t6 [] t5 [] t4 [] t3 [] t2 [] t1 [] allhands []]
+    (each [_ line (ipairs lines)]
+      (let [[hand bid] (string.split line " ")]
+        (case (hand2type hand)
+          "t7" (table.insert t7 {:hand hand :bid (tonumber bid)})
+          "t6" (table.insert t6 {:hand hand :bid (tonumber bid)})
+          "t5" (table.insert t5 {:hand hand :bid (tonumber bid)})
+          "t4" (table.insert t4 {:hand hand :bid (tonumber bid)})
+          "t3" (table.insert t3 {:hand hand :bid (tonumber bid)})
+          "t2" (table.insert t2 {:hand hand :bid (tonumber bid)})
+          "t1" (table.insert t1 {:hand hand :bid (tonumber bid)}))))
+    (table.join allhands t1)
+    (table.join allhands t2)
+    (table.join allhands t3)
+    (table.join allhands t4)
+    (table.join allhands t5)
+    (table.join allhands t6)
+    (table.join allhands t7)
+    allhands))
+
+(fn find-score [lines]
+  (let [hands (all-hands lines)]
+    (all-wins hands)))
+
+(fn test-input [lines]
+  (let [score (find-score lines)]
+    (assert (= 6440 score) score)))
+
+(local test-input-1 ["32T3K 765" 
+                     "T55J5 684"
+                     "KK677 28"
+                     "KTJJT 220"
+                     "QQQJA 483"])
+
+(test-input test-input-1)
+
+(fn test-input2 [lines]
+  (let [score (find-score lines)]
+    (assert (= 201 score) score)))
+
+(local test-input-2
+       ["AAATK 1"
+        "TTTAA 100"])
+
+(test-input2 test-input-2)
+
+(fn test-input3 [lines]
+  (let [score (find-score lines)]
+    (assert (= 10 score) score)))
+
+(local test-input-3
+       ["23456 1"
+        "AAAKK 3"
+        "AAAAA 1"])
+
+(test-input3 test-input-3)
+
+(fn test-input4 [lines]
+  (let [score (find-score lines)]
+    (assert (= 6592 score) score)))
+
+(local test-input-4
+ ["2345A 1"
+  "Q2KJJ 13"
+  "Q2Q2Q 19"
+  "T3T3J 17"
+  "T3Q33 11"
+  "2345J 3"
+  "J345A 2"
+  "32T3K 5"
+  "T55J5 29"
+  "KK677 7"
+  "KTJJT 34"
+  "QQQJA 31"
+  "JJJJJ 37"
+  "JAAAA 43"
+  "AAAAJ 59"
+  "AAAAA 61"
+  "2AAAA 23"
+  "2JJJJ 53"
+  "JJJJ2 41"])
+
+(test-input4 test-input-4)
+
+(fn read-lines [path]
+  (icollect [line (io.lines path)] line))
+
+(find-score (read-lines "07.inp"))
+
+#+end_src
+
+#+RESULTS:
+: 251545216
+
+* CANCELLED Day 7.2[fn:14]
+:LOGBOOK:
+- State "CANCELLED"  from "TODO"       [2023-12-11 Mon 11:45]
+:END:
+* DONE Day 8.1[fn:15]
+
+#+begin_src fennel :session day08
+(local lume (require :lume))
+(local fennel (require :fennel))
+
+(fn math.gcd [a b]
+  (if (= 0 b) a
+      (math.gcd b (% a b))))
+
+(fn math.lcm [a b]
+  (// (* a b) (math.gcd a b)))
+
+(fn math.lcmv [t]
+  (lume.reduce t math.lcm))
+
+(assert (= 78102694379
+           (math.lcm 
+            (math.lcm 
+             (math.lcm 61 53)
+             (math.lcm 59 79))
+            (math.lcm 73 71))))
+
+(fn pretty-print [xs]
+  (print (fennel.view xs)))
+
+(fn table.contains? [t e]
+  (if (lume.find t e)
+      true
+      false))
+
+(fn table.identical? [t1 t2]
+  (and 
+   (= (length t1)
+      (length t2))
+      (lume.all t1 (fn [e1] (table.contains? t2 e1)))))
+
+(fn string.pushback [s]
+  (.. 
+   (string.sub s 2 (length s))
+   (string.sub s 1 1)))
+
+(fn read-node [line]
+  [(string.sub line 1 3)
+   (string.sub line 8 10)
+   (string.sub line 13 15)])
+
+(fn read-nodes [lines]
+  (let [map {}]
+    (each [_ line (ipairs lines)]
+      (let [[start left right] (read-node line)]
+        (tset map start [left right])))
+    map))
+
+(local path "LRLLRRRLRRLRRRLRLRRLLRRLRRLRRLRRRLLRRLRRLLLRRLLRRRLRRRLRRRLRLRRRLRRRLRLRLRRLRLRRRLRLRLRRRLLRRRLRLRRLLLRRRLLRRLLLRRRLRRLLRLRLRRRLRRLLRRLRRRLRRRLLRRRLLRRRLRRLRRLRLRRRLLLRRRLRRRLRLRRLRRLRRLRRLRRLRRRLRRRLRRLLRRLRRRLRLLRLLRRLLRRLRRRLRRRLRRRLRRRLRRLRRRLLRRLRRRLRRLRRRLRRLRRLRRLRRLRRLRLRRRR")
+
+(fn path-find [map start end path step]
+  (if (= end start) step
+      (case (string.sub path 1 1)
+        "R" (path-find map (. (. map start) 2) end (string.pushback path) (+ 1 step))
+        "L" (path-find map (. (. map start) 1) end (string.pushback path) (+ 1 step)))))
+
+(fn test-input [lines expected path]
+  (let [map (read-nodes lines)]
+    (assert (= expected (path-find map "AAA" "ZZZ" path  0)))))
+
+(local test-input-1
+       ["AAA = (BBB, CCC)"
+        "BBB = (DDD, EEE)"
+        "CCC = (ZZZ, GGG)"
+        "DDD = (DDD, DDD)"
+        "EEE = (EEE, EEE)"
+        "GGG = (GGG, GGG)"
+        "ZZZ = (ZZZ, ZZZ)"])
+
+(test-input test-input-1 2 "RL")
+
+(local test-input-2
+       ["AAA = (BBB, BBB)"
+        "BBB = (AAA, ZZZ)"
+        "ZZZ = (ZZZ, ZZZ)"])
+
+(test-input test-input-2 6 "LLR")
+
+(fn real-input [lines path]
+  (let [map (read-nodes lines)]
+    (path-find map "AAA" "ZZZ" path 0)))
+
+(fn read-lines [path]
+  (icollect [line (io.lines path)] line))
+
+(real-input (read-lines "08.inp") path)
+#+end_src
+
+#+RESULTS:
+: 20093
+
+* DONE Day 8.2[fn:16]
+
+#+begin_src fennel :session day08
+(fn paths-find [desert start end path step]
+  (if (table.identical? start end) step
+      (let [newstart (case (string.sub path 1 1)
+                       "R" (lume.map start #(. (. desert $) 2))
+                       "L" (lume.map start #(. (. desert $) 1)))]
+        (paths-find desert newstart end (string.pushback path) (+ 1 step)))))
+
+(fn test-inputp2 [lines expected]
+  (let [map (read-nodes lines)]
+    (assert (= expected (paths-find map ["11A" "22A"] ["11Z" "22Z"] "LR" 0)))))
+
+(local test-input-p2
+       ["11A = (11B, XXX)"
+        "11B = (XXX, 11Z)"
+        "11Z = (11B, XXX)"
+        "22A = (22B, XXX)"
+        "22B = (22C, 22C)"
+        "22C = (22Z, 22Z)"
+        "22Z = (22B, 22B)"
+        "XXX = (XXX, XXX)"])
+
+(test-inputp2 test-input-p2 6)
+
+
+(fn path-to-any [map start end path step]
+  (if (table.contains? end start) step
+      (let [newstart (case (string.sub path 1 1)
+                       "R" (. (. map start) 2) 
+                       "L" (. (. map start) 1))]
+        (path-to-any map newstart end (string.pushback path) (+ 1 step)))))
+
+(fn p2-input [lines]
+  (let [map (read-nodes lines)
+        start ["VGA" "AAA" "LHA" "RHA" "CVA" "LDA"]
+        end ["BKZ" "KJZ" "XNZ" "XLZ" "PQZ" "ZZZ"]]
+    (lume.map start #(path-to-any map $ end path 0))))
+
+
+(math.lcmv (p2-input (read-lines "08.inp")))
+#+end_src
+
+#+RESULTS:
+: 22103062509257
+
+* DONE Day 9.1[fn:17]
+
+#+begin_src fennel :session day09
+(local lume (require :lume))
+(local fennel (require :fennel))
+
+(fn string.split [str sep]
+  (icollect [s (string.gmatch str (.. "[^" sep "]+"))] s))
+
+(fn math.sum [xs]
+  (accumulate [sum 0 _ x (ipairs xs)]
+    (+ sum x)))
+
+(fn pretty-print [xs]
+  (print (fennel.view xs)))
+
+(fn table.zero? [t]
+  (and (< 0 (length t))
+       (lume.all t #(= 0 $))))
+
+(fn last [xs]
+  (. xs (length xs)))
+
+(fn table.reverse [xs]
+  (let [result []]
+    (each [_ x (ipairs xs)]
+      (table.insert result 1 x))
+    result))
+
+(fn table.range [xs f t]
+  (let [result []]
+    (fcollect [i f t 1] (table.insert result (. xs i)))
+    result))
+
+(fn table.zip [t1 t2 f]
+  (assert (= (length t1)
+             (length t2)))
+  (let [result []]
+    (for [i 1 (length t1) 1]
+      (table.insert result (f (. t1 i) (. t2 i))))
+    result))
+
+(fn table.dec [t]
+  (let [t1 (table.range t 2 (length t))
+        t2 (table.range t 1 (- (length t) 1))]
+    (table.zip t1 t2 (fn [a b] (- a b)))))
+
+(fn derive [t]
+  (var dt t)
+  (let [result [dt]]
+    (while (not (table.zero? dt))
+      (set dt (table.dec dt))
+      (table.insert result dt))
+    result))
+
+(fn solve [t]
+  (let [result []]
+    (each [_ ti (ipairs t)]
+      (table.insert result (last ti)))
+    (math.sum result)))
+
+(fn read-input [lines]
+  (let [input []]
+    (each [_ line (ipairs lines)]
+      (table.insert input (lume.map (string.split line " ") #(tonumber $))))
+    input))
+
+(fn test-input [lines expected]
+  (let [input (read-input lines)]
+    (assert (= expected (math.sum (lume.map input #(solve (derive $))))))))
+
+(local test-input-1 [" 0  3  6  9 12 15"
+                   " 1  3  6 10 15 21"
+                   "10 13 16 21 30 45"])
+
+(test-input test-input-1 114)
+
+(fn read-lines [path]
+  (icollect [line (io.lines path)] line))
+
+(fn real-input [lines]
+  (let [input (read-input lines)]
+    (math.sum (lume.map input #(solve (derive $))))))
+
+(real-input (read-lines "09.inp"))
+#+end_src
+
+#+RESULTS:
+: 1702218515
+
+* DONE Day 9.2[fn:18]
+
+#+begin_src fennel :session day09
+(fn test-inputp2 [lines expected]
+  (let [input (read-input lines)]
+    (assert (= expected (math.sum (lume.map input #(solve (derive (table.reverse $)))))))))
+
+(test-inputp2 test-input-1 2)
+
+(fn real-input [lines]
+  (let [input (read-input lines)]
+    (math.sum (lume.map input #(solve (derive (table.reverse $)))))))
+
+(real-input (read-lines "09.inp"))
+#+end_src
+
+#+RESULTS:
+: 925
+
+* DONE Day 10.1[fn:19]
+
+#+begin_src fennel :session day10
+(local lume (require :lume))
+(local fennel (require :fennel))
+
+(fn string.toarray [s]
+  (let [result []]
+    (for [i 1 (length s)]
+      (table.insert result (string.sub s i i)))
+    result))
+
+(fn read-file [path]
+  (icollect [line (io.lines path)] line))
+
+(fn read-matrix [lines]
+  (let [matrix []]
+    (each [_ line (ipairs lines)]
+      (table.insert matrix (string.toarray line)))
+    matrix))
+
+(local test-input-1
+       [(string.toarray "-L|F7")
+        (string.toarray "7S-7|")
+        (string.toarray "L|7||")
+        (string.toarray "-L-J|")
+        (string.toarray "L|-JF")])
+
+(local test-input-2
+       [(string.toarray "7-F7-")
+        (string.toarray ".FJ|7")
+        (string.toarray "SJLL7")
+        (string.toarray "|F--J")
+        (string.toarray "LJ.LJ")])
+
+(fn table.contains? [t e]
+  (if (lume.find t e)
+      true
+      false))
+
+(local S2N ["|" "F" "7" "S"])
+(local N2S ["|" "L" "J" "S"])
+(local E2W ["-" "L" "F" "S"])
+(local W2E ["-" "7" "J" "S"])
+
+(fn connected? [t x y dir]
+  (case dir
+    :north (table.contains? S2N (?. (?. t (- x 1)) y))
+    :east (table.contains? W2E (?. (?. t x) (+ 1 y)))
+    :south (table.contains? N2S (?. (?. t (+ x 1)) y))
+    :west (table.contains? E2W (?. (?. t x) (- y 1)))))
+
+(fn move [t x y s from]
+  (let [pos (. (. t x) y)]
+    (if (and (< 0 s) (= "S" pos)) (// s 2)
+        (< (* (length t) (length (. t 1))) s) -1
+        (case pos
+          "S" (if (connected? t x y :north) (move t (- x 1) y (+ 1 s) :south)
+                  (connected? t x y :east) (move t x (+ y 1) (+ 1 s) :west)
+                  (connected? t x y :south) (move t (+ x 1) y (+ 1 s) :north)
+                  (connected? t x y :west) (move t x (- y 1) (+ 1 s) :east))
+          "-" (case from
+                :west (if (connected? t x y :east) (move t x (+ y 1) (+ 1 s) :west))
+                :east (if (connected? t x y :west) (move t x (- y 1) (+ 1 s) :east)))
+          "|" (case from
+                :south (if (connected? t x y :north) (move t (- x 1) y (+ 1 s) :south))
+                :north (if (connected? t x y :south) (move t (+ x 1) y (+ 1 s) :north)))
+          "F" (case from
+                :south (if (connected? t x y :east) (move t x (+ y 1) (+ 1 s) :west))
+                :east (if (connected? t x y :south) (move t (+ x 1) y (+ 1 s) :north)))
+          "L" (case from
+                :east (if (connected? t x y :north) (move t (- x 1) y (+ 1 s) :south))
+                :north (if (connected? t x y :east) (move t x (+ y 1) (+ 1 s) :west)))
+          "7" (case from
+                :west (if (connected? t x y :south) (move t (+ x 1) y (+ 1 s) :north))
+                :south (if (connected? t x y :west) (move t x (- y 1) (+ 1 s) :east)))
+          "J" (case from
+                :west (if (connected? t x y :north) (move t (- x 1) y (+ 1 s) :south))
+                :north (if (connected? t x y :west) (move t x (- y 1) (+ 1 s) :east)))))))
+
+(assert (= 4 (move test-input-1 2 2 0 :start)))
+
+(assert (= 8 (move test-input-2 3 1 0 :start)))
+
+
+(let [input (read-matrix (read-file "10.inp"))]
+  (move input 64 63 0 :start))
+
+#+end_src
+
+#+RESULTS:
+: 7093
+
+* CANCELLED Day 10.2[fn:20]
+:LOGBOOK:
+- State "CANCELLED"  from              [2023-12-11 Mon 11:53]
+:END:
+
+* Footnotes
+[fn:20] https://adventofcode.com/2023/day/10#part2
+[fn:19] https://adventofcode.com/2023/day/10 
+[fn:18] https://adventofcode.com/2023/day/9#part2
+[fn:17] https://adventofcode.com/2023/day/9 
+[fn:16] https://adventofcode.com/2023/day/8#part2
+[fn:15] https://adventofcode.com/2023/day/8 
+[fn:14] https://adventofcode.com/2023/day/7#part2
+[fn:13] https://adventofcode.com/2023/day/7 
+[fn:12] https://adventofcode.com/2023/day/6#part2
+[fn:11] https://adventofcode.com/2023/day/6
+[fn:10] https://adventofcode.com/2023/day/5#part2
+[fn:9] https://adventofcode.com/2023/day/5 
+[fn:8] https://adventofcode.com/2023/day/4#part2
+[fn:7] https://adventofcode.com/2023/day/4 
+[fn:6] https://adventofcode.com/2023/day/3#part2
+[fn:5] https://adventofcode.com/2023/day/3 
+[fn:4] https://adventofcode.com/2023/day/2#part2
+[fn:3] https://adventofcode.com/2023/day/2 
+[fn:2] https://adventofcode.com/2023/day/1#part2
+[fn:1] https://adventofcode.com/2023/day/1 
