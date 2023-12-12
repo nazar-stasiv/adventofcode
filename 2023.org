@@ -366,7 +366,140 @@
 #+RESULTS:
 : 5921508
 
-* TODO Day 5.1[fn:9]
+* DONE Day 5.1[fn:9]
+#+begin_src fennel :session day05
+(local lume (require :lume))
+
+(fn string.tonumarray [str]
+  (icollect [s (string.gmatch str (.. "[^ ]+"))] (tonumber s)))
+
+(fn read-lines [path]
+  (icollect [line (io.lines path)] line))
+
+(fn table.range [xs f t]
+  (let [result []]
+    (fcollect [i f t 1] (table.insert result (. xs i)))
+    result))
+
+(fn empty? [xs]
+  (or (= nil xs)
+      (= 0 (length xs))))
+
+(fn vec2tree2 [node t ?f]
+  (let [len (length t)]
+    (if (= 0 len) nil
+        (= 1 len) (tset node :val (. t 1))
+        (do
+          (table.sort t ?f)
+          (let [mid (math.ceil (/ len 2))
+                left (table.range t 1 (- mid 1))
+                right (table.range t (+ mid 1) len)]
+            (tset node :val (. t mid))
+            (when (not (empty? left)) (tset node :left (vec2tree2 {} left ?f)))
+            (when (not (empty? right)) (tset node :right (vec2tree2 {} right ?f))))))
+    node))
+
+(fn comp [a b]
+  (< (. a 2) (. b 2)))
+
+(local seed2soil
+       (vec2tree2 {}
+                  [[50 98 2]
+                   [52 50 48]]
+                  comp))
+
+(local soil2fertilizer
+       (vec2tree2 {}
+                  [[0 15 37]
+                   [37 52 2]
+                   [39 0 15]]
+                  comp))
+
+(local fertilizer2water
+       (vec2tree2 {}
+                  [[49 53 8]
+                   [0 11 42]
+                   [42 0 7]
+                   [57 7 4]]
+                  comp))
+
+
+(local water2light
+       (vec2tree2 {}
+                  [[88 18 7]
+                   [18 25 70]]
+                  comp))
+
+(local light2temperature
+       (vec2tree2 {}
+                  [[45 77 23]
+                   [81 45 19]
+                   [68 64 13]]
+                  comp))
+
+(local temperature2humidity
+       (vec2tree2 {}
+                  [[0 69 1]
+                   [1 0 69]]
+                  comp))
+
+(local humidity2location
+       (vec2tree2 {}
+                  [[60 56 37]
+                   [56 93 4]]
+                  comp))
+
+(local test-seeds
+       [79 14 55 13])
+
+(fn search-in-range [node v]
+  (if node
+      (let [from (. (. node :val) 2)
+            to (- (+ from (. (. node :val) 3)) 1)]
+        (if (< v from) (search-in-range (. node :left) v)
+            (> v to) (search-in-range (. node :right) v)
+            (and (<= from v) (<= v to)) (+ (- v from) (. (. node :val) 1))))
+      v))
+
+(fn seed2soil2fert2water2light2temp2hum2loc [x t1 t2 t3 t4 t5 t6 t7]
+  (->> x
+       (search-in-range t1)
+       (search-in-range t2)
+       (search-in-range t3)
+       (search-in-range t4)
+       (search-in-range t5)
+       (search-in-range t6)
+       (search-in-range t7)))
+
+(fn test-input [xs t1 t2 t3 t4 t5 t6 t7]
+  (let [locations []]
+    (each [_ seed (ipairs xs)]
+      (let [location (seed2soil2fert2water2light2temp2hum2loc seed t1 t2 t3 t4 t5 t6 t7)]
+        (table.insert locations location)))
+    (assert (= 35 (math.min (table.unpack locations))))))
+
+(test-input test-seeds seed2soil soil2fertilizer fertilizer2water water2light light2temperature temperature2humidity humidity2location)
+
+(fn real-input [xs]
+  (let [locations []
+        seeds (table.unpack (lume.map (table.range xs 1 1) #(string.tonumarray $)))
+        t1 (vec2tree2 {} (lume.map (table.range xs 4 27) #(string.tonumarray $))  comp)
+        t2 (vec2tree2 {} (lume.map (table.range xs 30 60) #(string.tonumarray $)) comp)
+        t3 (vec2tree2 {} (lume.map (table.range xs 63 72) #(string.tonumarray $)) comp)
+        t4 (vec2tree2 {} (lume.map (table.range xs 75 101) #(string.tonumarray $)) comp)
+        t5 (vec2tree2 {} (lume.map (table.range xs 104 114) #(string.tonumarray $)) comp)
+        t6 (vec2tree2 {} (lume.map (table.range xs 117 129) #(string.tonumarray $)) comp)
+        t7 (vec2tree2 {} (lume.map (table.range xs 132 139) #(string.tonumarray $)) comp)]
+    (each [_ seed (ipairs seeds)]
+      (table.insert locations (seed2soil2fert2water2light2temp2hum2loc seed t1 t2 t3 t4 t5 t6 t7)))
+    (math.min (table.unpack locations))))
+
+(real-input (read-lines "05.inp"))
+#+end_src
+
+#+RESULTS:
+: 1181555926
+
 * CANCELLED Day 5.2[fn:10]
 :LOGBOOK:
 - State "CANCELLED"  from "TODO"       [2023-12-11 Mon 11:10]
@@ -1036,24 +1169,145 @@
 - State "CANCELLED"  from              [2023-12-11 Mon 11:53]
 :END:
 
+* DONE Day 11.1[fn:21]
+#+begin_src fennel :session day11
+(local lume (require :lume))
+
+(local test-input-1 ["...#......"
+                     ".......#.."
+                     "#........."
+                     ".........."
+                     "......#..."
+                     ".#........"
+                     ".........#"
+                     ".........."
+                     ".......#.."
+                     "#...#....."])
+
+(fn math.sum [xs]
+  (accumulate [sum 0 _ x (ipairs xs)]
+    (if (lume.isarray x)
+        (+ sum (math.sum x))
+        (+ sum x))))
+
+(fn table.range [xs f t]
+  (let [result []]
+    (fcollect [i f t 1] (table.insert result (. xs i)))
+    result))
+
+(fn string.toarray [s]
+  (let [result []]
+    (for [i 1 (length s)]
+      (table.insert result (string.sub s i i)))
+    result))
+
+(fn read-matrix [lines]
+  (let [matrix []]
+    (each [_ line (ipairs lines)]
+      (table.insert matrix (string.toarray line)))
+    matrix))
+
+(fn distance [a b]
+  (let [[x1 y1] a [x2 y2] b]
+    (+ (math.abs (- x1 x2)) (math.abs (- y1 y2)))))
+
+(fn find-coords [matrix v]
+  (let [result []]
+    (for [i 1 (length matrix) 1]
+      (for [j 1 (length (. matrix i)) 1]
+        (when (= v (. (. matrix i) j))
+          (table.insert result [i j]))))
+    result))
+
+(fn calculate-distances [xs]
+  (let [result []]
+    (for [i 1 (length xs) 1]
+      (table.insert result 
+                    (lume.map (table.range xs i (length xs)) #(distance (. xs i) $))))
+    result))
+
+(fn table.reverse [xs]
+  (let [result []]
+    (each [_ x (ipairs xs)]
+      (table.insert result 1 x))
+    result))
+
+(fn find-blank-rows [matrix blank]
+  (let [result []]
+    (each [i row (ipairs matrix)]
+      (if (lume.all row #(= $ blank))
+          (table.insert result i)))
+    (table.reverse result)))
+
+(fn table.transpose [xs]
+  (let [result []]
+    (for [j 1 (length (. xs 1)) 1]
+      (table.insert result j [])
+      (for [i 1 (length xs) 1]
+        (table.insert (. result j) i (. (. xs i) j))))
+    result))
+
+(fn expand-empty-space [matrix]
+  (let [rows (find-blank-rows matrix ".")]
+    (each [_ row (ipairs rows)]
+      (table.insert matrix row (. matrix row))))
+  (let [result (table.transpose matrix)
+        rows (find-blank-rows result ".")]
+    (each [_ row (ipairs rows)]
+      (table.insert result row (. result row)))
+    (table.transpose result)))
+
+(fn test-input [matrix]
+  (let [coords (find-coords matrix "#")
+        distances (calculate-distances coords)]
+    (assert (= 9 (. (. distances 5) (- 9 5 -1))))
+    (assert (= 15 (. (. distances 1) (- 7 1 -1))))
+    (assert (= 17 (. (. distances 3) (- 6 3 -1))))
+    (assert (= 5 (. (. distances 8) (- 9 8 -1))))
+    (assert (= 374 (math.sum distances)))))
+
+(test-input (expand-empty-space (read-matrix test-input-1)))
+
+(fn read-lines [path]
+  (icollect [line (io.lines path)] line))
+
+(fn real-input [matrix]
+  (let [coords (find-coords matrix "#")
+        dist (calculate-distances coords)]
+    (math.sum dist)))
+
+(real-input (expand-empty-space (read-matrix (read-lines "11.inp"))))
+#+end_src
+
+#+RESULTS:
+: 9965032
+
+* CANCELLED Day 11.2[fn:22]
+:LOGBOOK:
+- State "CANCELLED"  from              [2023-12-11 Mon 21:46]
+:END:
+
 * Footnotes
+
+[fn:22] https://adventofcode.com/2023/day/11#part2
+[fn:21] https://adventofcode.com/2023/day/11
 [fn:20] https://adventofcode.com/2023/day/10#part2
-[fn:19] https://adventofcode.com/2023/day/10 
+[fn:19] https://adventofcode.com/2023/day/10
 [fn:18] https://adventofcode.com/2023/day/9#part2
-[fn:17] https://adventofcode.com/2023/day/9 
+[fn:17] https://adventofcode.com/2023/day/9
 [fn:16] https://adventofcode.com/2023/day/8#part2
-[fn:15] https://adventofcode.com/2023/day/8 
+[fn:15] https://adventofcode.com/2023/day/8
 [fn:14] https://adventofcode.com/2023/day/7#part2
-[fn:13] https://adventofcode.com/2023/day/7 
+[fn:13] https://adventofcode.com/2023/day/7
 [fn:12] https://adventofcode.com/2023/day/6#part2
 [fn:11] https://adventofcode.com/2023/day/6
 [fn:10] https://adventofcode.com/2023/day/5#part2
-[fn:9] https://adventofcode.com/2023/day/5 
+[fn:9] https://adventofcode.com/2023/day/5
 [fn:8] https://adventofcode.com/2023/day/4#part2
-[fn:7] https://adventofcode.com/2023/day/4 
+[fn:7] https://adventofcode.com/2023/day/4
 [fn:6] https://adventofcode.com/2023/day/3#part2
-[fn:5] https://adventofcode.com/2023/day/3 
+[fn:5] https://adventofcode.com/2023/day/3
 [fn:4] https://adventofcode.com/2023/day/2#part2
-[fn:3] https://adventofcode.com/2023/day/2 
+[fn:3] https://adventofcode.com/2023/day/2
 [fn:2] https://adventofcode.com/2023/day/1#part2
 [fn:1] https://adventofcode.com/2023/day/1 
