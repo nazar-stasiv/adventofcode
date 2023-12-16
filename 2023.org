@@ -1287,8 +1287,195 @@
 - State "CANCELLED"  from              [2023-12-11 Mon 21:46]
 :END:
 
+* CANCELLED Day 12.1[fn:23]
+:LOGBOOK:
+- State "CANCELLED"  from              [2023-12-14 Thu 11:15]
+:END:
+
+* CANCELLED Day 12.2[fn:24]
+:LOGBOOK:
+- State "CANCELLED"  from              [2023-12-14 Thu 11:15]
+:END:
+
+* CANCELLED Day 13.1[fn:25]
+:LOGBOOK:
+- State "CANCELLED"  from              [2023-12-14 Thu 11:15]
+:END:
+
+* CANCELLED Day 13.2[fn:26]
+:LOGBOOK:
+- State "CANCELLED"  from              [2023-12-14 Thu 11:16]
+:END:
+
+* DONE Day 14.1[fn:27]
+#+begin_src fennel :session day14
+(local lume (require :lume))
+
+(fn string.toarray [s]
+  (let [result []]
+    (for [i 1 (length s)]
+      (table.insert result (string.sub s i i)))
+    result))
+
+(fn table.replace [t i j v]
+  (let [old (table.remove (. t i) j)]
+    (table.insert (. t i) j v)
+    old))
+
+(fn table.swap [t i j direction]
+  (let [ij (. (. t i) j)]
+    (case direction
+      :north (when (< 1 i)
+               (let [old (table.replace t (- i 1) j ij)]
+                 (table.replace t i j old)))
+      :south (when (< i (length t))
+               (let [old (table.replace t (+ i 1) j ij)]
+                 (table.replace t i j old)))
+      :east (when (< j (length (. t i)))
+               (let [old (table.replace t i (+ j 1) ij)]
+                 (table.replace t i j old)))
+      :west (when (< 1 j)
+               (let [old (table.replace t i (- j 1) ij)]
+                 (table.replace t i j old)))))
+  t)
+
+(fn table.reverse [xs]
+  (let [result []]
+    (each [_ x (ipairs xs)]
+      (table.insert result 1 x))
+    result))
+
+(fn math.wsum [xs]
+  (let [xx (table.reverse xs)]
+    (accumulate [sum 0 i x (ipairs xx)]
+      (+ sum (* i x)))))
+
+(fn table.tonumbers [lines]
+  (lume.map lines #(string.toarray $)))
+
+(fn tilt-north [matrix]
+  (let [len1 (length matrix)
+        len2 (length (. matrix 1))]
+    (for [i (- len1 1) 1 -1]
+      (for [j len1 (+ i 1) -1]
+        (for [k len2 1 -1]
+          (when (and (= "O" (. (. matrix j) k))
+                     (= "." (. (. matrix (- j 1)) k)))
+            (table.swap matrix j k :north))))))
+  matrix)
+
+(fn tilt-south [matrix]
+  matrix)
+
+(fn tilt-east [matrix]
+  matrix)
+
+(fn tilt-west [matrix]
+  matrix)
+
+(fn tilt [matrix direction]
+  (case direction
+    :north (tilt-north (tilt-north (tilt-north matrix)))
+    :south (tilt-south matrix)
+    :east (tilt-east matrix)
+    :west (tilt-west matrix)
+    _ matrix))
+
+(fn weight [xs]
+  (var count 0)
+  (each [_ x (ipairs xs)]
+    (when (= "O" x)
+      (set count (+ 1 count))))
+  count)
+
+(fn weights [xs]
+  (lume.map xs #(weight $)))
+
+(fn test-input [lines]
+  (let [input (table.tonumbers lines) 
+        matrix (tilt input :north)]
+    (assert (= 136 (math.wsum (weights matrix))))))
+
+(test-input ["O....#...."
+             "O.OO#....#"
+             ".....##..."
+             "OO.#O....O"
+             ".O.....O#."
+             "O.#..O.#.#"
+             "..O..#O..O"
+             ".......O.."
+             "#....###.."
+             "#OO..#...."])
+
+(fn read-lines [path]
+  (icollect [line (io.lines path)] line))
+
+(fn real-input [lines]
+  (let [input (table.tonumbers lines)
+        matrix (tilt input :north)]
+    (math.wsum (weights matrix))))
+
+(real-input (read-lines "14.inp"))
+
+#+end_src
+
+#+RESULTS:
+: 113456
+
+* CANCELLED Day 14.2[fn:28]
+:LOGBOOK:
+- State "CANCELLED"  from              [2023-12-14 Thu 11:17]
+:END:
+
+* DONE Day 15.1[fn:29]
+#+begin_src fennel :session day15
+(local lume (require :lume))
+
+(fn hash [s]
+  (var result 0)
+  (for [i 1 (length s) 1]
+    (set result (% (* 17 (+ result (string.byte s i i))) 256)))
+  result)
+
+(fn string.split [str sep]
+  (icollect [s (string.gmatch str (.. "[^" sep "]+"))] s))
+
+(fn math.sum [xs]
+  (accumulate [sum 0 _ x (ipairs xs)]
+    (+ sum x)))
+
+(fn test-input [input]
+  (assert (= 1320 (math.sum (lume.map (string.split input ",") #(hash $))))))
+
+(test-input "rn=1,cm-,qp=3,cm=2,qp-,pc=4,ot=9,ab=5,pc-,pc=6,ot=7")
+
+(fn read-lines [path]
+  (icollect [line (io.lines path)] line))
+
+(fn real-input [input]
+  (math.sum (lume.map (string.split input ",") #(hash $))))
+
+(real-input (. (read-lines "15.inp") 1))
+#+end_src
+
+#+RESULTS:
+: 514281
+
+* CANCELLED Day 15.2[fn:30]
+:LOGBOOK:
+- State "CANCELLED"  from              [2023-12-15 Fri 08:38]
+:END:
+
 * Footnotes
 
+[fn:30] https://adventofcode.com/2023/day/15#part2 
+[fn:29] https://adventofcode.com/2023/day/15
+[fn:28] https://adventofcode.com/2023/day/14#part2 
+[fn:27] https://adventofcode.com/2023/day/14
+[fn:26] https://adventofcode.com/2023/day/13#part2 
+[fn:25] https://adventofcode.com/2023/day/13
+[fn:24] https://adventofcode.com/2023/day/12#part2 
+[fn:23] https://adventofcode.com/2023/day/12
 [fn:22] https://adventofcode.com/2023/day/11#part2
 [fn:21] https://adventofcode.com/2023/day/11
 [fn:20] https://adventofcode.com/2023/day/10#part2
